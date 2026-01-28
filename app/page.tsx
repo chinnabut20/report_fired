@@ -4,8 +4,10 @@ import { Flame, TreePine } from "lucide-react";
 import { FilterSection } from "@/components/FilterSection";
 import { ResultsSection } from "@/components/ResultsSection";
 import { FilterState, FuelRequest } from "@/types/fuel-request";
-import { mockData } from "@/data/mock-data";
 import Swal from "sweetalert2";
+
+// TODO: เชื่อมต่อ database - ตอนนี้ใช้ array ว่างชั่วคราว
+const data: FuelRequest[] = [];
 
 const initialFilters: FilterState = {
   prefix: "",
@@ -27,7 +29,7 @@ const Index = () => {
   const [isSearching, setIsSearching] = useState(false);
 
   const filteredData = useMemo(() => {
-    return mockData.filter((item) => {
+    return data.filter((item: FuelRequest) => {
       // Prefix filter
       if (appliedFilters.prefix && item.prefix !== appliedFilters.prefix)
         return false;
@@ -152,7 +154,7 @@ const Index = () => {
         />
 
         {/* Results Section */}
-        <ResultsSection data={filteredData} totalCount={mockData.length} />
+        <ResultsSection data={filteredData} totalCount={data.length} />
       </main>
     </div>
   );
