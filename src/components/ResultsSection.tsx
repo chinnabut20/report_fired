@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FuelRequest } from "@/types/fuel-request";
-import { Download, ChevronLeft, ChevronRight } from "lucide-react";
+import { Download, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -11,6 +11,14 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -44,6 +52,7 @@ const statusConfig = {
 
 const prepareExportData = (data: FuelRequest[]) => {
   return data.map((item) => ({
+    ลำดับ: item.id,
     คำนำหน้า: item.prefix,
     ชื่อ: item.firstName,
     นามสกุล: item.lastName,
@@ -70,7 +79,7 @@ const prepareExportData = (data: FuelRequest[]) => {
 export function ResultsSection({ data, totalCount }: ResultsSectionProps) {
   const handleDownloadXLSX = async () => {
     const exportData = prepareExportData(data);
-    const headers = ["ลำดับ", ...Object.keys(exportData[0] || {})];
+    const headers = Object.keys(exportData[0] || {});
 
     // Create workbook and worksheet
     const workbook = new ExcelJS.Workbook();
@@ -100,12 +109,12 @@ export function ResultsSection({ data, totalCount }: ResultsSectionProps) {
       };
     });
 
-    // Add data rows with sequence number
-    exportData.forEach((row, index) => {
+    // Add data rows
+    exportData.forEach((row) => {
       const values = Object.keys(exportData[0] || {}).map(
         (h) => row[h as keyof typeof row],
       );
-      worksheet.addRow([index + 1, ...values]);
+      worksheet.addRow(values);
     });
 
     // Auto-fit column widths
@@ -129,12 +138,7 @@ export function ResultsSection({ data, totalCount }: ResultsSectionProps) {
 
   const handleDownloadCSV = () => {
     const exportData = prepareExportData(data);
-    // Add sequence number to each row
-    const dataWithSeq = exportData.map((row, index) => ({
-      ลำดับ: index + 1,
-      ...row,
-    }));
-    const ws = XLSX.utils.json_to_sheet(dataWithSeq);
+    const ws = XLSX.utils.json_to_sheet(exportData);
     const csv = XLSX.utils.sheet_to_csv(ws);
     const blob = new Blob(["\uFEFF" + csv], {
       type: "text/csv;charset=utf-8;",
@@ -146,13 +150,31 @@ export function ResultsSection({ data, totalCount }: ResultsSectionProps) {
   };
 
   // Pagination state
-  const ITEMS_PER_PAGE = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
-  const totalPages = Math.ceil(data.length / ITEMS_PER_PAGE);
+  const [searchText, setSearchText] = useState("");
 
-  const paginatedData = data.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE,
+  // Filter data based on search
+  const filteredData = data.filter((item) => {
+    if (!searchText) return true;
+    const searchLower = searchText.toLowerCase();
+    return (
+      item.firstName?.toLowerCase().includes(searchLower) ||
+      item.lastName?.toLowerCase().includes(searchLower) ||
+      item.phone?.includes(searchText) ||
+      item.province?.toLowerCase().includes(searchLower) ||
+      item.district?.toLowerCase().includes(searchLower) ||
+      item.subDistrict?.toLowerCase().includes(searchLower) ||
+      item.fuelType?.toLowerCase().includes(searchLower) ||
+      item.landUseType?.toLowerCase().includes(searchLower)
+    );
+  });
+
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+
+  const paginatedData = filteredData.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage,
   );
 
   const handlePrevPage = () => {
@@ -235,14 +257,53 @@ export function ResultsSection({ data, totalCount }: ResultsSectionProps) {
           </div>
         </CardHeader>
         <CardContent className="pt-0">
+          {/* Table Controls: Entries per page + Search */}
+          <div className="flex items-center justify-between mb-4 gap-4">
+            <div className="flex items-center gap-2">
+              <Select
+                value={String(itemsPerPage)}
+                onValueChange={(value) => {
+                  setItemsPerPage(Number(value));
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="w-[80px] bg-muted/50">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="100">100</SelectItem>
+                </SelectContent>
+              </Select>
+              <span className="text-sm text-muted-foreground">
+                entries per page
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Search:</span>
+              <div className="relative">
+                <Input
+                  placeholder="ค้นหา..."
+                  value={searchText}
+                  onChange={(e) => {
+                    setSearchText(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-[200px] bg-muted/50"
+                />
+              </div>
+            </div>
+          </div>
           <ScrollArea className="w-full whitespace-nowrap rounded-md border">
-            <Table className="font-['Prompt']">
+            <Table className="font-prompt">
               <TableHeader>
                 <TableRow className="bg-muted/50 hover:bg-muted/50">
-                  <TableHead className="font-semibold text-foreground min-w-[50px] font-['Prompt']">
+                  <TableHead className="font-semibold text-foreground min-w-[50px] font-prompt">
                     ลำดับ
                   </TableHead>
-                  <TableHead className="font-semibold text-foreground min-w-[80px] font-['Prompt']">
+                  <TableHead className="font-semibold text-foreground min-w-[80px] font-prompt">
                     คำนำหน้า
                   </TableHead>
                   <TableHead className="font-semibold text-foreground min-w-[100px]">
@@ -309,11 +370,11 @@ export function ResultsSection({ data, totalCount }: ResultsSectionProps) {
                   paginatedData.map((request, index) => {
                     const status = statusConfig[request.approvalStatus];
                     const globalIndex =
-                      (currentPage - 1) * ITEMS_PER_PAGE + index;
+                      (currentPage - 1) * itemsPerPage + index;
                     return (
                       <TableRow key={request.id} className="hover:bg-muted/30">
                         <TableCell className="text-center">
-                          {globalIndex + 1}
+                          {request.id}
                         </TableCell>
                         <TableCell>{request.prefix}</TableCell>
                         <TableCell>{request.firstName}</TableCell>
@@ -376,12 +437,12 @@ export function ResultsSection({ data, totalCount }: ResultsSectionProps) {
           </ScrollArea>
 
           {/* Pagination Controls */}
-          {data.length > ITEMS_PER_PAGE && (
+          {filteredData.length > itemsPerPage && (
             <div className="flex items-center justify-between mt-4 px-2">
               <p className="text-sm text-muted-foreground">
-                แสดงรายการที่ {(currentPage - 1) * ITEMS_PER_PAGE + 1} -{" "}
-                {Math.min(currentPage * ITEMS_PER_PAGE, data.length)} จากทั้งหมด{" "}
-                {data.length} รายการ
+                แสดงรายการที่ {(currentPage - 1) * itemsPerPage + 1} -{" "}
+                {Math.min(currentPage * itemsPerPage, filteredData.length)}{" "}
+                จากทั้งหมด {filteredData.length} รายการ
               </p>
               <div className="flex items-center gap-2">
                 <Button

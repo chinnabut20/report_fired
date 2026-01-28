@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
 
             FROM public.report_data
             ${whereClause} 
-            ORDER BY created_at DESC;
+            ORDER BY id ASC;
         `;
 
         const result = await db.query(query, values);

@@ -1,0 +1,56 @@
+[
+    {
+      "LookupGroup": "ARG",
+      "LookupType": "BurnType",
+      "LookupCode": "1",
+      "LookupValue": "พื้นที่เกษตร"
+    },
+    {
+      "LookupGroup": "ARG",
+      "LookupType": "BurnType",
+      "LookupCode": "2",
+      "LookupValue": "พื้นที่เกษตร (ในเขตป่าอนุรักษ์)"
+    },
+    {
+      "LookupGroup": "ARG",
+      "LookupType": "BurnType",
+      "LookupCode": "3",
+      "LookupValue": "พื้นที่เกษตร (ในเขตป่าสงวน)"
+    },
+    {
+      "LookupGroup": "ARG",
+      "LookupType": "BurnType",
+      "LookupCode": "4",
+      "LookupValue": "พื้นที่เกษตร (ในเขตป่าชุมชน)"
+    },
+    {
+      "LookupGroup": "FOR",
+      "LookupType": "BurnType",
+      "LookupCode": "5",
+      "LookupValue": "พื้นที่ป่า (ป่าสงวนแห่งชาติ)"
+    },
+    {
+      "LookupGroup": "FOR",
+      "LookupType": "BurnType",
+      "LookupCode": "6",
+      "LookupValue": "พื้นที่ป่า (ป่าอนุรักษ์)"
+    },
+    {
+      "LookupGroup": "FOR",
+      "LookupType": "BurnType",
+      "LookupCode": "7",
+      "LookupValue": "พื้นที่ป่า (ป่าชุมชน)"
+    },
+    {
+      "LookupGroup": "FOR",
+      "LookupType": "BurnType",
+      "LookupCode": "8",
+      "LookupValue": "พื้นที่ถือครองฯ ตาม ม.64 (พรบ.อุทยานฯ)"
+    },
+    {
+      "LookupGroup": "FOR",
+      "LookupType": "BurnType",
+      "LookupCode": "9",
+      "LookupValue": "พื้นที่ถือครองฯ ตาม ม.121 (พรบ.สงวนและคุ้มครองสัตว์ป่า)"
+    }
+  ]

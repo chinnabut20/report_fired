@@ -1,36 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from "@/lib/db";
+import { boundaryDb } from "@/lib/db";
 
 const getProvinces = async () => {
     const query = `
-        SELECT gid AS id, prov_code, prov_namt AS name_th, prov_name AS name_en, 
-               ST_AsGeoJSON(geom)::json AS geom
+        SELECT gid AS id, prov_code, prov_namt AS name_th, prov_name AS name_en
         FROM public.th_province_4326
         ORDER BY prov_namt ASC;
     `;
-    return await db.query(query);
+    return await boundaryDb.query(query);
 };
 
 const getAmphoes = async (provCode: string) => {
     const query = `
         SELECT gid AS id, amp_namt AS name_th, amp_name AS name_en,
-               prov_namt, amp_code, ST_AsGeoJSON(geom)::json AS geom
+               prov_namt, amp_code
         FROM public.th_amphoe_4326
         WHERE prov_code = $1
         ORDER BY amp_namt ASC;
     `;
-    return await db.query(query, [provCode]);
+    return await boundaryDb.query(query, [provCode]);
 };
 
 const getTambons = async (provCode: string, ampCode: string) => {
+    // ใช้ 2 หลักท้ายของ amp_code เพราะ tambon table ใช้ format ต่างจาก amphoe
+    const shortAmpCode = ampCode.slice(-2);
     const query = `
-        SELECT gid AS id, tam_code, tam_namt AS name_th, tam_name AS name_en,
-               ST_AsGeoJSON(geom)::json AS geom
+        SELECT gid AS id, tam_code, tam_namt AS name_th, tam_name AS name_en
         FROM public.th_tambon_4326
         WHERE prov_code = $1 AND amp_code = $2
         ORDER BY tam_namt ASC;
     `;
-    return await db.query(query, [provCode, ampCode]);
+    return await boundaryDb.query(query, [provCode, shortAmpCode]);
 };
 
 export async function GET(request: NextRequest) {

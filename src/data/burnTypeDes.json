@@ -1,0 +1,92 @@
+[
+  {
+    "LookupGroup": "ARG",
+    "LookupType": "BurnTypeDes",
+    "LookupCode": "1",
+    "LookupValue": "นาข้าว"
+  },
+  {
+    "LookupGroup": "ARG",
+    "LookupType": "BurnTypeDes",
+    "LookupCode": "2",
+    "LookupValue": "พืชไร่ (ข้าวโพด)"
+  },
+  {
+    "LookupGroup": "ARG",
+    "LookupType": "BurnTypeDes",
+    "LookupCode": "3",
+    "LookupValue": "พืชไร่ (อ้อย)"
+  },
+  {
+    "LookupGroup": "ARG",
+    "LookupType": "BurnTypeDes",
+    "LookupCode": "4",
+    "LookupValue": "พืชไร่ อื่นๆ"
+  },
+  {
+    "LookupGroup": "ARG",
+    "LookupType": "BurnTypeDes",
+    "LookupCode": "5",
+    "LookupValue": "ไร่หมุนเวียน"
+  },
+  {
+    "LookupGroup": "ARG",
+    "LookupType": "BurnTypeDes",
+    "LookupCode": "6",
+    "LookupValue": "พืชสวน"
+  },
+  {
+    "LookupGroup": "ARG",
+    "LookupType": "BurnTypeDes",
+    "LookupCode": "7",
+    "LookupValue": "ไม้ยืนต้น"
+  },
+  {
+    "LookupGroup": "ARG",
+    "LookupType": "BurnTypeDes",
+    "LookupCode": "8",
+    "LookupValue": "ไม้ผล"
+  },
+  {
+    "LookupGroup": "ARG",
+    "LookupType": "BurnTypeDes",
+    "LookupCode": "9",
+    "LookupValue": "ทุ่งหญ้าหรือโรงเรือนเลี้ยงสัตว์"
+  },
+  {
+    "LookupGroup": "FOR",
+    "LookupType": "BurnTypeDes",
+    "LookupCode": "1",
+    "LookupValue": "ป่าเบญจพรรณ"
+  },
+  {
+    "LookupGroup": "FOR",
+    "LookupType": "BurnTypeDes",
+    "LookupCode": "2",
+    "LookupValue": "ป่าเต็งรัง (Declduous Dipterocarp Forest)"
+  },
+  {
+    "LookupGroup": "FOR",
+    "LookupType": "BurnTypeDes",
+    "LookupCode": "3",
+    "LookupValue": "ป่าหญ้า"
+  },
+  {
+    "LookupGroup": "FOR",
+    "LookupType": "BurnTypeDes",
+    "LookupCode": "4",
+    "LookupValue": "สวนสัก"
+  },
+  {
+    "LookupGroup": "FOR",
+    "LookupType": "BurnTypeDes",
+    "LookupCode": "5",
+    "LookupValue": "สวนยูคาลิปตัส"
+  },
+  {
+    "LookupGroup": "FOR",
+    "LookupType": "BurnTypeDes",
+    "LookupCode": "6",
+    "LookupValue": "อื่นๆ"
+  }
+]

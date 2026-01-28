@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Search,
   Filter,
@@ -8,7 +8,7 @@ import {
   TreePine,
   RotateCcw,
   Loader2,
-  User,
+  CheckCircle,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -29,15 +29,17 @@ import { format } from "date-fns";
 import { th } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { FilterState } from "@/types/fuel-request";
-import {
-  prefixes,
-  provinces,
-  districts,
-  subDistricts,
-  fuelTypes,
-  landUseTypes,
-  approvalStatuses,
-} from "@/data/mock-data";
+import { approvalStatuses } from "@/data/mock-data";
+import burnTypeData from "@/data/burnType.json";
+import burnTypeDesData from "@/data/burnTypeDes.json";
+
+// Types for JSON data
+interface BurnType {
+  LookupGroup: string;
+  LookupType: string;
+  LookupCode: string;
+  LookupValue: string;
+}
 
 interface FilterSectionProps {
   filters: FilterState;
@@ -45,6 +47,28 @@ interface FilterSectionProps {
   onReset: () => void;
   onSearch: () => void;
   isLoading?: boolean;
+}
+
+interface Province {
+  id: number;
+  prov_code: string;
+  name_th: string;
+  name_en: string;
+}
+
+interface District {
+  id: number;
+  amp_code: string;
+  name_th: string;
+  name_en: string;
+  prov_namt: string;
+}
+
+interface SubDistrict {
+  id: number;
+  tam_code: string;
+  name_th: string;
+  name_en: string;
 }
 
 export function FilterSection({
@@ -56,6 +80,35 @@ export function FilterSection({
 }: FilterSectionProps) {
   const [isExpanded, setIsExpanded] = useState(true);
 
+  // State for boundary data
+  const [provinces, setProvinces] = useState<Province[]>([]);
+  const [districts, setDistricts] = useState<District[]>([]);
+  const [subDistricts, setSubDistricts] = useState<SubDistrict[]>([]);
+
+  // State to track selected items with codes
+  const [selectedProvince, setSelectedProvince] = useState<Province | null>(
+    null,
+  );
+  const [selectedDistrict, setSelectedDistrict] = useState<District | null>(
+    null,
+  );
+
+  // Loading states for boundary dropdowns
+  const [isLoadingProvinces, setIsLoadingProvinces] = useState(false);
+  const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
+  const [isLoadingSubDistricts, setIsLoadingSubDistricts] = useState(false);
+
+  // State for land use type selection
+  const [selectedLandUseType, setSelectedLandUseType] =
+    useState<BurnType | null>(null);
+
+  // Get filtered fuel types based on selected land use type's LookupGroup
+  const filteredFuelTypes = selectedLandUseType
+    ? (burnTypeDesData as BurnType[]).filter(
+        (fuel) => fuel.LookupGroup === selectedLandUseType.LookupGroup,
+      )
+    : [];
+
   const updateFilter = <K extends keyof FilterState>(
     key: K,
     value: FilterState[K],
@@ -63,12 +116,79 @@ export function FilterSection({
     onFiltersChange({ ...filters, [key]: value });
   };
 
-  const availableDistricts = filters.province
-    ? districts[filters.province] || []
-    : [];
-  const availableSubDistricts = filters.district
-    ? subDistricts[filters.district] || []
-    : [];
+  // Fetch provinces on mount
+  useEffect(() => {
+    const fetchProvinces = async () => {
+      setIsLoadingProvinces(true);
+      try {
+        const response = await fetch("/api/boundary");
+        const data = await response.json();
+        if (response.ok && Array.isArray(data)) {
+          setProvinces(data);
+        } else {
+          // invalid data handled silently or with minimal log if needed, but user asked to remove debug.
+          // keeping it empty or just not logging data.
+        }
+      } catch (error) {
+        console.error("Error fetching provinces:", error);
+      } finally {
+        setIsLoadingProvinces(false);
+      }
+    };
+    fetchProvinces();
+  }, []);
+
+  // Fetch districts when province changes
+  useEffect(() => {
+    const fetchDistricts = async () => {
+      if (!selectedProvince) {
+        setDistricts([]);
+        return;
+      }
+
+      setIsLoadingDistricts(true);
+      try {
+        const response = await fetch(
+          `/api/boundary?prov_code=${selectedProvince.prov_code}`,
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setDistricts(data);
+        }
+      } catch (error) {
+        console.error("Error fetching districts:", error);
+      } finally {
+        setIsLoadingDistricts(false);
+      }
+    };
+    fetchDistricts();
+  }, [selectedProvince]);
+
+  // Fetch sub-districts when district changes
+  useEffect(() => {
+    const fetchSubDistricts = async () => {
+      if (!selectedProvince || !selectedDistrict) {
+        setSubDistricts([]);
+        return;
+      }
+
+      setIsLoadingSubDistricts(true);
+      try {
+        const response = await fetch(
+          `/api/boundary?prov_code=${selectedProvince.prov_code}&amp_code=${selectedDistrict.amp_code}`,
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setSubDistricts(data);
+        }
+      } catch (error) {
+        console.error("Error fetching sub-districts:", error);
+      } finally {
+        setIsLoadingSubDistricts(false);
+      }
+    };
+    fetchSubDistricts();
+  }, [selectedProvince, selectedDistrict]);
 
   return (
     <div className="filter-card animate-fade-up">
@@ -97,9 +217,10 @@ export function FilterSection({
             รีเซ็ต
           </Button>
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             onClick={() => setIsExpanded(!isExpanded)}
+            className="bg-white"
           >
             {isExpanded ? "ซ่อน" : "แสดง"}
           </Button>
@@ -108,50 +229,199 @@ export function FilterSection({
 
       {isExpanded && (
         <div className="space-y-4">
-          {/* Row 1: คำนำหน้า (1), ค้นหา (2), สถานะการอนุมัติ (1) */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Prefix */}
+          {/* Row 1: จังหวัด, อำเภอ, ตำบล */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Province */}
             <div>
               <label className="text-sm font-medium text-[#D32F2F] mb-2 flex items-center gap-2">
-                <User className="w-4 h-4 text-[#D32F2F]" />
-                คำนำหน้า
+                <MapPin className="w-4 h-4 text-[#D32F2F]" />
+                จังหวัด
+                {isLoadingProvinces && (
+                  <Loader2 className="w-3 h-3 animate-spin text-[#E65100]" />
+                )}
               </label>
               <Select
-                value={filters.prefix}
-                onValueChange={(value) => updateFilter("prefix", value)}
+                value={filters.province}
+                onValueChange={(value) => {
+                  const province = provinces.find((p) => p.name_th === value);
+                  setSelectedProvince(province || null);
+                  setSelectedDistrict(null);
+                  onFiltersChange({
+                    ...filters,
+                    province: value,
+                    district: "",
+                    subDistrict: "",
+                  });
+                }}
               >
                 <SelectTrigger className="bg-muted/50 text-black">
-                  <SelectValue placeholder="เลือกคำนำหน้า" />
+                  <SelectValue
+                    placeholder={
+                      isLoadingProvinces ? "กำลังโหลด..." : "เลือกจังหวัด"
+                    }
+                  />
                 </SelectTrigger>
-                <SelectContent className="bg-card">
-                  {prefixes.map((prefix) => (
-                    <SelectItem key={prefix} value={prefix}>
-                      {prefix}
+                <SelectContent className="bg-card z-[9999]" position="popper">
+                  {provinces.map((province) => (
+                    <SelectItem
+                      key={province.prov_code}
+                      value={province.name_th}
+                    >
+                      {province.name_th}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Search */}
-            <div className="md:col-span-2">
-              <label className="text-sm font-medium text-[#D32F2F] mb-2 block">
-                ค้นหา (ชื่อ, นามสกุล, เบอร์โทร)
+            {/* District */}
+            <div>
+              <label className="text-sm font-medium text-[#D32F2F] mb-2 flex items-center gap-2">
+                อำเภอ
+                {isLoadingDistricts && (
+                  <Loader2 className="w-3 h-3 animate-spin text-[#E65100]" />
+                )}
               </label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="พิมพ์คำค้นหา..."
-                  value={filters.searchText}
-                  onChange={(e) => updateFilter("searchText", e.target.value)}
-                  className="pl-10 bg-muted/50 border-border focus:border-primary text-black placeholder:text-black"
-                />
-              </div>
+              <Select
+                value={filters.district}
+                onValueChange={(value) => {
+                  const district = districts.find((d) => d.name_th === value);
+                  setSelectedDistrict(district || null);
+                  onFiltersChange({
+                    ...filters,
+                    district: value,
+                    subDistrict: "",
+                  });
+                }}
+                disabled={!filters.province || isLoadingDistricts}
+              >
+                <SelectTrigger className="bg-muted/50 text-black">
+                  <SelectValue
+                    placeholder={
+                      isLoadingDistricts ? "กำลังโหลด..." : "เลือกอำเภอ"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent className="bg-card z-[9999]" position="popper">
+                  {districts.map((district) => (
+                    <SelectItem
+                      key={district.amp_code}
+                      value={district.name_th}
+                    >
+                      {district.name_th}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
+            {/* Sub-District */}
+            <div>
+              <label className="text-sm font-medium text-[#D32F2F] mb-2 flex items-center gap-2">
+                ตำบล
+                {isLoadingSubDistricts && (
+                  <Loader2 className="w-3 h-3 animate-spin text-[#E65100]" />
+                )}
+              </label>
+              <Select
+                value={filters.subDistrict}
+                onValueChange={(value) => updateFilter("subDistrict", value)}
+                disabled={!filters.district || isLoadingSubDistricts}
+              >
+                <SelectTrigger className="bg-muted/50 text-black">
+                  <SelectValue
+                    placeholder={
+                      isLoadingSubDistricts ? "กำลังโหลด..." : "เลือกตำบล"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent className="bg-card z-[9999]" position="popper">
+                  {subDistricts.map((subDistrict) => (
+                    <SelectItem
+                      key={subDistrict.tam_code}
+                      value={subDistrict.name_th}
+                    >
+                      {subDistrict.name_th}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Row 2: ประเภทการใช้ที่ดิน, ชนิดเชื้อเพลิง */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Land Use Type */}
+            <div>
+              <label className="text-sm font-medium text-[#5D4037] mb-2 flex items-center gap-2">
+                <TreePine className="w-4 h-4 text-[#5D4037]" />
+                ประเภทการใช้ที่ดิน
+              </label>
+              <Select
+                value={filters.landUseType}
+                onValueChange={(value) => {
+                  const landUseType = (burnTypeData as BurnType[]).find(
+                    (t) => t.LookupValue === value,
+                  );
+                  setSelectedLandUseType(landUseType || null);
+                  // Clear fuel type when land use type changes
+                  onFiltersChange({
+                    ...filters,
+                    landUseType: value,
+                    fuelType: "",
+                  });
+                }}
+              >
+                <SelectTrigger className="bg-muted/50 text-black">
+                  <SelectValue placeholder="เลือกประเภท" />
+                </SelectTrigger>
+                <SelectContent className="bg-card z-[9999]" position="popper">
+                  {(burnTypeData as BurnType[]).map((type) => (
+                    <SelectItem key={type.LookupCode} value={type.LookupValue}>
+                      {type.LookupValue}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Fuel Type */}
+            <div>
+              <label className="text-sm font-medium text-[#5D4037] mb-2 flex items-center gap-2">
+                <Flame className="w-4 h-4 text-[#5D4037]" />
+                ชนิดเชื้อเพลิง
+              </label>
+              <Select
+                value={filters.fuelType}
+                onValueChange={(value) => updateFilter("fuelType", value)}
+                disabled={!filters.landUseType}
+              >
+                <SelectTrigger className="bg-muted/50 text-black">
+                  <SelectValue
+                    placeholder={
+                      !filters.landUseType
+                        ? "เลือกประเภทที่ดินก่อน"
+                        : "เลือกชนิดเชื้อเพลิง"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent className="bg-card z-[9999]" position="popper">
+                  {filteredFuelTypes.map((type) => (
+                    <SelectItem key={type.LookupCode} value={type.LookupValue}>
+                      {type.LookupValue}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* Row 3: สถานะการอนุมัติ, วันที่เริ่มต้น, วันที่สิ้นสุด */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* Approval Status */}
             <div>
-              <label className="text-sm font-medium text-[#D32F2F] mb-2 block">
+              <label className="text-sm font-medium text-[#D32F2F] mb-2 flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-[#D32F2F]" />
                 สถานะการอนุมัติ
               </label>
               <Select
@@ -170,89 +440,7 @@ export function FilterSection({
                 </SelectContent>
               </Select>
             </div>
-          </div>
 
-          {/* Row 2: จังหวัด, อำเภอ, ตำบล */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Province */}
-            <div>
-              <label className="text-sm font-medium text-[#5D4037] mb-2 flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-[#5D4037]" />
-                จังหวัด
-              </label>
-              <Select
-                value={filters.province}
-                onValueChange={(value) => {
-                  updateFilter("province", value);
-                  updateFilter("district", "");
-                  updateFilter("subDistrict", "");
-                }}
-              >
-                <SelectTrigger className="bg-muted/50 text-black">
-                  <SelectValue placeholder="เลือกจังหวัด" />
-                </SelectTrigger>
-                <SelectContent className="bg-card">
-                  {provinces.map((province) => (
-                    <SelectItem key={province} value={province}>
-                      {province}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* District */}
-            <div>
-              <label className="text-sm font-medium text-[#5D4037] mb-2 block">
-                อำเภอ
-              </label>
-              <Select
-                value={filters.district}
-                onValueChange={(value) => {
-                  updateFilter("district", value);
-                  updateFilter("subDistrict", "");
-                }}
-                disabled={!filters.province}
-              >
-                <SelectTrigger className="bg-muted/50 text-black">
-                  <SelectValue placeholder="เลือกอำเภอ" />
-                </SelectTrigger>
-                <SelectContent className="bg-card">
-                  {availableDistricts.map((district) => (
-                    <SelectItem key={district} value={district}>
-                      {district}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Sub-District */}
-            <div>
-              <label className="text-sm font-medium text-[#5D4037] mb-2 block">
-                ตำบล
-              </label>
-              <Select
-                value={filters.subDistrict}
-                onValueChange={(value) => updateFilter("subDistrict", value)}
-                disabled={!filters.district}
-              >
-                <SelectTrigger className="bg-muted/50 text-black">
-                  <SelectValue placeholder="เลือกตำบล" />
-                </SelectTrigger>
-                <SelectContent className="bg-card">
-                  {availableSubDistricts.map((subDistrict) => (
-                    <SelectItem key={subDistrict} value={subDistrict}>
-                      {subDistrict}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* Row 3: วันที่เริ่มต้น, วันที่สิ้นสุด, ชนิดเชื้อเพลิง, ประเภทการใช้ที่ดิน */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Date From */}
             <div>
               <label className="text-sm font-medium text-[#D32F2F] mb-2 flex items-center gap-2">
@@ -316,52 +504,6 @@ export function FilterSection({
                   />
                 </PopoverContent>
               </Popover>
-            </div>
-
-            {/* Land Use Type */}
-            <div>
-              <label className="text-sm font-medium text-[#D32F2F] mb-2 flex items-center gap-2">
-                <TreePine className="w-4 h-4 text-[#D32F2F]" />
-                ประเภทการใช้ที่ดิน
-              </label>
-              <Select
-                value={filters.landUseType}
-                onValueChange={(value) => updateFilter("landUseType", value)}
-              >
-                <SelectTrigger className="bg-muted/50 text-black">
-                  <SelectValue placeholder="เลือกประเภท" />
-                </SelectTrigger>
-                <SelectContent className="bg-card">
-                  {landUseTypes.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Fuel Type */}
-            <div>
-              <label className="text-sm font-medium text-[#D32F2F] mb-2 flex items-center gap-2">
-                <Flame className="w-4 h-4 text-[#D32F2F]" />
-                ชนิดเชื้อเพลิง
-              </label>
-              <Select
-                value={filters.fuelType}
-                onValueChange={(value) => updateFilter("fuelType", value)}
-              >
-                <SelectTrigger className="bg-muted/50 text-black">
-                  <SelectValue placeholder="เลือกชนิดเชื้อเพลิง" />
-                </SelectTrigger>
-                <SelectContent className="bg-card">
-                  {fuelTypes.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
             </div>
           </div>
 
