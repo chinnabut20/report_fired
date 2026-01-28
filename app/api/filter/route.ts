@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
 
                 CASE 
                     WHEN burn_decition = true THEN 'ควรอนุมัติ'
-                    WHEN burn_decition = false THEN 'ไม่ไม่ควรอนุมัติ'
+                    WHEN burn_decition = false THEN 'ไม่ควรอนุมัติ'
                     ELSE '-' 
                 END AS decision_text,
                 
@@ -109,31 +109,30 @@ export async function GET(request: NextRequest) {
         const formattedData = result.rows.map((row: any) => ({
             id: row.id,
             
-            // ข้อมูลผู้ส่งคำร้อง
-            "คำนำหน้า": row.title,                
-            "ชื่อ": row.firstname,       
-            "นามสกุล": row.lastname,         
-            "เบอร์โทรศัพท์": row.phone,                
-            "วันที่ส่งคำร้อง": row.created_at,   
+            title: row.title,              // คำนำหน้า
+            firstname: row.firstname,      // ชื่อจริง
+            lastname: row.lastname,        // นามสกุล
+            phone: row.phone,              // เบอร์โทรศัพท์
+            created_at: row.created_at,    // วันที่ส่งคำร้อง
 
-            // ข้อมูลพื้นที่
-            "จังหวัด": row.province,          
-            "อำเภอ": row.district,          
-            "ตำบล": row.sub_district,  
-            "ชนิดเชื้อเพลิง": row.burn_type,        
-            "ประเภทการใช้ที่ดิน": row.burn_type_des, 
-            "ขนาดพื้นที่ที่ขอจัดการเชื้อเพลิง (ไร่)": Number(row.burn_area || 0), 
-            "ละติจูด": Number(row.latitude || 0),  
-            "ลองจิจูด": Number(row.longitude || 0), 
+            province: row.province,           // จังหวัด
+            district: row.district,           // อำเภอ
+            sub_district: row.sub_district,   // ตำบล
+            burn_type: row.burn_type,         // ชนิดเชื้อเพลิง
+            burn_type_des: row.burn_type_des, // ประเภทการใช้ที่ดิน
+            burn_area: Number(row.burn_area || 0), // ขนาดพื้นที่ที่ขอจัดการเชื้อเพลิง (ไร่)
+            latitude: Number(row.latitude || 0),   // ละติจูด
+            longitude: Number(row.longitude || 0), // ลองจิจูด
             
-            // สถานะ
-            "สถานะการอนุมัติ": row.status_text,
-            "คำแนะนำ": row.decision_text,   
-            "ชื่อผู้อนุมัติ": row.approve_by_f_name, 
-            "นามสกุลผู้อนุมัติ": row.approve_by_l_name, 
-            "เบอร์โทรผู้อนุมัติ": row.approve_by, 
-            "ขนาดพื้นที่อนุมัติ (ไร่)": Number(row.approve_burn || 0), 
-            "วันที่จัดการเชื้อเพลิง": row.burn_date,          
+            status_text: row.status_text,     // สถานะการอนุมัติ 
+            decision_text: row.decision_text, // คำแนะนำ/ผลการพิจารณา 
+            
+            approve_by_firstname: row.approve_by_f_name, // ชื่อผู้อนุมัติ
+            approve_by_lastname: row.approve_by_l_name,  // นามสกุลผู้อนุมัติ
+            approve_by_phone: row.approve_by,            // เบอร์โทรผู้อนุมัติ
+            approve_burn_area: Number(row.approve_burn || 0), // ขนาดพื้นที่อนุมัติ (ไร่)
+            burn_date: row.burn_date          // วันที่จัดการเชื้อเพลิง
+
         }));
 
         return NextResponse.json(formattedData);
