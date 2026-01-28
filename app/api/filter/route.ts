@@ -77,6 +77,12 @@ export async function GET(request: NextRequest) {
                 burn_area,
                 latitude,
                 longitude,
+
+                CASE 
+                    WHEN burn_decition = true THEN 'ควรอนุมัติ'
+                    WHEN burn_decition = false THEN 'ไม่ไม่ควรอนุมัติ'
+                    ELSE '-' 
+                END AS decision_text,
                 
                 CASE 
                     WHEN is_approve = true AND is_reject = false AND actual_burn > 0 THEN 'อนุมัติรายงานผลแล้ว'
@@ -121,7 +127,8 @@ export async function GET(request: NextRequest) {
             "ลองจิจูด": Number(row.longitude || 0), 
             
             // สถานะ
-            "สถานะการอนุมัติ": row.status_text,   
+            "สถานะการอนุมัติ": row.status_text,
+            "คำแนะนำ": row.decision_text,   
             "ชื่อผู้อนุมัติ": row.approve_by_f_name, 
             "นามสกุลผู้อนุมัติ": row.approve_by_l_name, 
             "เบอร์โทรผู้อนุมัติ": row.approve_by, 
