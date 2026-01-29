@@ -63,15 +63,16 @@ const prepareExportData = (data: FuelRequest[]) => {
     ตำบล: item.subDistrict,
     ชนิดเชื้อเพลิง: item.fuelType,
     ประเภทการใช้ที่ดิน: item.landUseType,
-    "พื้นที่ขอ (ไร่)": item.requestedArea,
+    "ขนาดพื้นที่ที่ขอจัดการเชื้อเพลิง (ไร่)": item.requestedArea,
     ละติจูด: item.latitude,
     ลองจิจูด: item.longitude,
-    "คำแนะนำ FireD": item.fireDRecommendation,
-    สถานะการอนุมัติ: statusConfig[item.approvalStatus].label,
+    "คำแนะนำในการอนุมัติ จากระบบ FireD": item.fireDRecommendation,
+    "สถานะการอนุมัติ / การรายงานผลกลับ":
+      statusConfig[item.approvalStatus].label,
     ชื่อผู้อนุมัติ: item.approverFirstName || "-",
     นามสกุลผู้อนุมัติ: item.approverLastName || "-",
     เบอร์โทรผู้อนุมัติ: item.approverPhone || "-",
-    "พื้นที่อนุมัติ (ไร่)": item.approvedArea || "-",
+    "ขนาดพื้นที่อนุมัติ (ไร่)": item.approvedArea || "-",
     วันที่จัดการเชื้อเพลิง: item.managementDate || "-",
   }));
 };
@@ -109,12 +110,54 @@ export function ResultsSection({ data, totalCount }: ResultsSectionProps) {
       };
     });
 
-    // Add data rows
-    exportData.forEach((row) => {
+    // Find the index of the status column (1-based for ExcelJS)
+    const statusColumnIndex = headers.indexOf("สถานะการอนุมัติ") + 1;
+
+    // Add data rows with status color
+    exportData.forEach((row, rowIndex) => {
       const values = Object.keys(exportData[0] || {}).map(
         (h) => row[h as keyof typeof row],
       );
-      worksheet.addRow(values);
+      const dataRow = worksheet.addRow(values);
+
+      // Apply color to the status cell based on status value
+      if (statusColumnIndex > 0) {
+        const statusCell = dataRow.getCell(statusColumnIndex);
+        const statusValue = row["สถานะการอนุมัติ / การรายงานผลกลับ"];
+
+        let bgColor = "FFFFFFFF"; // Default white
+        let textColor = "FF000000"; // Default black
+
+        switch (statusValue) {
+          case "รอการอนุมัติ":
+            bgColor = "FFFFF3CD"; // Yellow background
+            textColor = "FF856404"; // Dark yellow text
+            break;
+          case "อนุมัติแล้ว":
+            bgColor = "FFD4EDDA"; // Green background
+            textColor = "FF155724"; // Dark green text
+            break;
+          case "ไม่อนุมัติ":
+            bgColor = "FFF8D7DA"; // Red background
+            textColor = "FF721C24"; // Dark red text
+            break;
+          case "รายงานผลแล้ว":
+            bgColor = "FFD1ECF1"; // Blue background
+            textColor = "FF0C5460"; // Dark blue text
+            break;
+        }
+
+        statusCell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: bgColor },
+        };
+        statusCell.font = {
+          color: { argb: textColor },
+          bold: true,
+        };
+        statusCell.alignment = { horizontal: "center", vertical: "middle" };
+      }
     });
 
     // Auto-fit column widths
@@ -336,7 +379,7 @@ export function ResultsSection({ data, totalCount }: ResultsSectionProps) {
                     ประเภทการใช้ที่ดิน
                   </TableHead>
                   <TableHead className="font-semibold text-foreground min-w-[100px]">
-                    พื้นที่ขอ (ไร่)
+                    ขนาดพื้นที่ที่ขอจัดการเชื้อเพลิง (ไร่)
                   </TableHead>
                   <TableHead className="font-semibold text-foreground min-w-[100px]">
                     ละติจูด
@@ -345,10 +388,10 @@ export function ResultsSection({ data, totalCount }: ResultsSectionProps) {
                     ลองจิจูด
                   </TableHead>
                   <TableHead className="font-semibold text-foreground min-w-[200px]">
-                    คำแนะนำ FireD
+                    คำแนะนำในการอนุมัติ จากระบบ FireD
                   </TableHead>
-                  <TableHead className="font-semibold text-foreground min-w-[130px]">
-                    สถานะการอนุมัติ
+                  <TableHead className="font-semibold text-foreground min-w-[180px]">
+                    สถานะการอนุมัติ / การรายงานผลกลับ
                   </TableHead>
                   <TableHead className="font-semibold text-foreground min-w-[100px]">
                     ชื่อผู้อนุมัติ
@@ -359,8 +402,8 @@ export function ResultsSection({ data, totalCount }: ResultsSectionProps) {
                   <TableHead className="font-semibold text-foreground min-w-[130px]">
                     เบอร์โทรผู้อนุมัติ
                   </TableHead>
-                  <TableHead className="font-semibold text-foreground min-w-[120px]">
-                    พื้นที่อนุมัติ (ไร่)
+                  <TableHead className="font-semibold text-foreground min-w-[150px]">
+                    ขนาดพื้นที่อนุมัติ (ไร่)
                   </TableHead>
                   <TableHead className="font-semibold text-foreground min-w-[140px]">
                     วันที่จัดการเชื้อเพลิง
@@ -446,29 +489,86 @@ export function ResultsSection({ data, totalCount }: ResultsSectionProps) {
                 {Math.min(currentPage * itemsPerPage, filteredData.length)}{" "}
                 จากทั้งหมด {filteredData.length} รายการ
               </p>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
+                {/* First Page */}
                 <Button
-                  variant="outline"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  className="px-2"
+                >
+                  «
+                </Button>
+                {/* Previous Page */}
+                <Button
+                  variant="ghost"
                   size="sm"
                   onClick={handlePrevPage}
                   disabled={currentPage === 1}
-                  className="gap-1"
+                  className="px-2"
                 >
-                  <ChevronLeft className="w-4 h-4" />
-                  ก่อนหน้า
+                  ‹
                 </Button>
-                <span className="text-sm font-medium px-3">
-                  หน้า {currentPage} / {totalPages}
-                </span>
+
+                {/* Page Numbers */}
+                {(() => {
+                  const pages: (number | string)[] = [];
+                  const maxVisiblePages = 5;
+                  let startPage = Math.max(
+                    1,
+                    currentPage - Math.floor(maxVisiblePages / 2),
+                  );
+                  let endPage = Math.min(
+                    totalPages,
+                    startPage + maxVisiblePages - 1,
+                  );
+
+                  if (endPage - startPage + 1 < maxVisiblePages) {
+                    startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                  }
+
+                  for (let i = startPage; i <= endPage; i++) {
+                    pages.push(i);
+                  }
+
+                  return pages.map((page) => (
+                    <Button
+                      key={page}
+                      variant={currentPage === page ? "outline" : "ghost"}
+                      size="sm"
+                      onClick={() =>
+                        typeof page === "number" && setCurrentPage(page)
+                      }
+                      className={cn(
+                        "px-3 min-w-[36px]",
+                        currentPage === page && "border-2 font-semibold",
+                      )}
+                    >
+                      {page}
+                    </Button>
+                  ));
+                })()}
+
+                {/* Next Page */}
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
                   onClick={handleNextPage}
                   disabled={currentPage === totalPages}
-                  className="gap-1"
+                  className="px-2"
                 >
-                  ถัดไป
-                  <ChevronRight className="w-4 h-4" />
+                  ›
+                </Button>
+                {/* Last Page */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  className="px-2"
+                >
+                  »
                 </Button>
               </div>
             </div>

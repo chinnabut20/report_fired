@@ -9,6 +9,8 @@ import {
   RotateCcw,
   Loader2,
   CheckCircle,
+  ChevronsUpDown,
+  Check,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -25,6 +27,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -85,6 +95,15 @@ export function FilterSection({
   isLoading = false,
 }: FilterSectionProps) {
   const [isExpanded, setIsExpanded] = useState(true);
+
+  // State for controlling date popover open/close
+  const [isDateFromOpen, setIsDateFromOpen] = useState(false);
+  const [isDateToOpen, setIsDateToOpen] = useState(false);
+
+  // State for controlling combobox popover open/close
+  const [isProvinceOpen, setIsProvinceOpen] = useState(false);
+  const [isDistrictOpen, setIsDistrictOpen] = useState(false);
+  const [isSubDistrictOpen, setIsSubDistrictOpen] = useState(false);
 
   // State for boundary data
   const [provinces, setProvinces] = useState<Province[]>([]);
@@ -216,15 +235,6 @@ export function FilterSection({
           <Button
             variant="outline"
             size="sm"
-            onClick={onReset}
-            className="gap-2"
-          >
-            <RotateCcw className="w-4 h-4" />
-            รีเซ็ต
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
             onClick={() => setIsExpanded(!isExpanded)}
             className="bg-white"
           >
@@ -237,7 +247,7 @@ export function FilterSection({
         <div className="space-y-4">
           {/* Row 1: จังหวัด, อำเภอ, ตำบล */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Province */}
+            {/* Province - Searchable Combobox */}
             <div>
               <label className="text-sm font-medium text-[#D32F2F] mb-2 flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-[#D32F2F]" />
@@ -246,41 +256,86 @@ export function FilterSection({
                   <Loader2 className="w-3 h-3 animate-spin text-[#E65100]" />
                 )}
               </label>
-              <Select
-                value={filters.province}
-                onValueChange={(value) => {
-                  const province = provinces.find((p) => p.name_th === value);
-                  setSelectedProvince(province || null);
-                  setSelectedDistrict(null);
-                  onFiltersChange({
-                    ...filters,
-                    province: value,
-                    district: "",
-                    subDistrict: "",
-                  });
-                }}
-              >
-                <SelectTrigger className="bg-muted/50 text-black">
-                  <SelectValue
-                    placeholder={
-                      isLoadingProvinces ? "กำลังโหลด..." : "เลือกจังหวัด"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent className="bg-card z-[9999]" position="popper">
-                  {provinces.map((province) => (
-                    <SelectItem
-                      key={province.prov_code}
-                      value={province.name_th}
-                    >
-                      {province.name_th}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={isProvinceOpen} onOpenChange={setIsProvinceOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={isProvinceOpen}
+                    className="w-full justify-between bg-muted/50 text-black font-normal"
+                  >
+                    {filters.province ||
+                      (isLoadingProvinces ? "กำลังโหลด..." : "เลือกจังหวัด")}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="p-0 bg-card z-[9999]"
+                  align="start"
+                  style={{ width: "var(--radix-popover-trigger-width)" }}
+                >
+                  <Command>
+                    <CommandInput placeholder="ค้นหาจังหวัด..." />
+                    <CommandList>
+                      <CommandEmpty>ไม่พบจังหวัด</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="__all__"
+                          onSelect={() => {
+                            setSelectedProvince(null);
+                            setSelectedDistrict(null);
+                            onFiltersChange({
+                              ...filters,
+                              province: "",
+                              district: "",
+                              subDistrict: "",
+                            });
+                            setIsProvinceOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              !filters.province ? "opacity-100" : "opacity-0",
+                            )}
+                          />
+                          ทั้งหมด
+                        </CommandItem>
+                        {provinces.map((province) => (
+                          <CommandItem
+                            key={province.prov_code}
+                            value={province.name_th}
+                            onSelect={() => {
+                              setSelectedProvince(province);
+                              setSelectedDistrict(null);
+                              onFiltersChange({
+                                ...filters,
+                                province: province.name_th,
+                                district: "",
+                                subDistrict: "",
+                              });
+                              setIsProvinceOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                filters.province === province.name_th
+                                  ? "opacity-100"
+                                  : "opacity-0",
+                              )}
+                            />
+                            {province.name_th}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
-            {/* District */}
+            {/* District - Searchable Combobox */}
             <div>
               <label className="text-sm font-medium text-[#D32F2F] mb-2 flex items-center gap-2">
                 อำเภอ
@@ -288,40 +343,83 @@ export function FilterSection({
                   <Loader2 className="w-3 h-3 animate-spin text-[#E65100]" />
                 )}
               </label>
-              <Select
-                value={filters.district}
-                onValueChange={(value) => {
-                  const district = districts.find((d) => d.name_th === value);
-                  setSelectedDistrict(district || null);
-                  onFiltersChange({
-                    ...filters,
-                    district: value,
-                    subDistrict: "",
-                  });
-                }}
-                disabled={!filters.province || isLoadingDistricts}
-              >
-                <SelectTrigger className="bg-muted/50 text-black">
-                  <SelectValue
-                    placeholder={
-                      isLoadingDistricts ? "กำลังโหลด..." : "เลือกอำเภอ"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent className="bg-card z-[9999]" position="popper">
-                  {districts.map((district) => (
-                    <SelectItem
-                      key={district.amp_code}
-                      value={district.name_th}
-                    >
-                      {district.name_th}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={isDistrictOpen} onOpenChange={setIsDistrictOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={isDistrictOpen}
+                    disabled={!filters.province || isLoadingDistricts}
+                    className="w-full justify-between bg-muted/50 text-black font-normal"
+                  >
+                    {filters.district ||
+                      (isLoadingDistricts ? "กำลังโหลด..." : "เลือกอำเภอ")}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="p-0 bg-card z-[9999]"
+                  align="start"
+                  style={{ width: "var(--radix-popover-trigger-width)" }}
+                >
+                  <Command>
+                    <CommandInput placeholder="ค้นหาอำเภอ..." />
+                    <CommandList>
+                      <CommandEmpty>ไม่พบอำเภอ</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="__all__"
+                          onSelect={() => {
+                            setSelectedDistrict(null);
+                            onFiltersChange({
+                              ...filters,
+                              district: "",
+                              subDistrict: "",
+                            });
+                            setIsDistrictOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              !filters.district ? "opacity-100" : "opacity-0",
+                            )}
+                          />
+                          ทั้งหมด
+                        </CommandItem>
+                        {districts.map((district) => (
+                          <CommandItem
+                            key={district.amp_code}
+                            value={district.name_th}
+                            onSelect={() => {
+                              setSelectedDistrict(district);
+                              onFiltersChange({
+                                ...filters,
+                                district: district.name_th,
+                                subDistrict: "",
+                              });
+                              setIsDistrictOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                filters.district === district.name_th
+                                  ? "opacity-100"
+                                  : "opacity-0",
+                              )}
+                            />
+                            {district.name_th}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
-            {/* Sub-District */}
+            {/* Sub-District - Searchable Combobox */}
             <div>
               <label className="text-sm font-medium text-[#D32F2F] mb-2 flex items-center gap-2">
                 ตำบล
@@ -329,29 +427,75 @@ export function FilterSection({
                   <Loader2 className="w-3 h-3 animate-spin text-[#E65100]" />
                 )}
               </label>
-              <Select
-                value={filters.subDistrict}
-                onValueChange={(value) => updateFilter("subDistrict", value)}
-                disabled={!filters.district || isLoadingSubDistricts}
+              <Popover
+                open={isSubDistrictOpen}
+                onOpenChange={setIsSubDistrictOpen}
               >
-                <SelectTrigger className="bg-muted/50 text-black">
-                  <SelectValue
-                    placeholder={
-                      isLoadingSubDistricts ? "กำลังโหลด..." : "เลือกตำบล"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent className="bg-card z-[9999]" position="popper">
-                  {subDistricts.map((subDistrict) => (
-                    <SelectItem
-                      key={subDistrict.tam_code}
-                      value={subDistrict.name_th}
-                    >
-                      {subDistrict.name_th}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={isSubDistrictOpen}
+                    disabled={!filters.district || isLoadingSubDistricts}
+                    className="w-full justify-between bg-muted/50 text-black font-normal"
+                  >
+                    {filters.subDistrict ||
+                      (isLoadingSubDistricts ? "กำลังโหลด..." : "เลือกตำบล")}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="p-0 bg-card z-[9999]"
+                  align="start"
+                  style={{ width: "var(--radix-popover-trigger-width)" }}
+                >
+                  <Command>
+                    <CommandInput placeholder="ค้นหาตำบล..." />
+                    <CommandList>
+                      <CommandEmpty>ไม่พบตำบล</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="__all__"
+                          onSelect={() => {
+                            updateFilter("subDistrict", "");
+                            setIsSubDistrictOpen(false);
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              !filters.subDistrict
+                                ? "opacity-100"
+                                : "opacity-0",
+                            )}
+                          />
+                          ทั้งหมด
+                        </CommandItem>
+                        {subDistricts.map((subDistrict) => (
+                          <CommandItem
+                            key={subDistrict.tam_code}
+                            value={subDistrict.name_th}
+                            onSelect={() => {
+                              updateFilter("subDistrict", subDistrict.name_th);
+                              setIsSubDistrictOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                filters.subDistrict === subDistrict.name_th
+                                  ? "opacity-100"
+                                  : "opacity-0",
+                              )}
+                            />
+                            {subDistrict.name_th}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
@@ -364,16 +508,17 @@ export function FilterSection({
                 ประเภทการใช้ที่ดิน
               </label>
               <Select
-                value={filters.landUseType}
+                value={filters.landUseType || "__all__"}
                 onValueChange={(value) => {
+                  const actualValue = value === "__all__" ? "" : value;
                   const landUseType = (burnTypeData as BurnType[]).find(
-                    (t) => t.LookupValue === value,
+                    (t) => t.LookupValue === actualValue,
                   );
                   setSelectedLandUseType(landUseType || null);
                   // Clear fuel type when land use type changes
                   onFiltersChange({
                     ...filters,
-                    landUseType: value,
+                    landUseType: actualValue,
                     fuelType: "",
                   });
                 }}
@@ -382,6 +527,7 @@ export function FilterSection({
                   <SelectValue placeholder="เลือกประเภท" />
                 </SelectTrigger>
                 <SelectContent className="bg-card z-[9999]" position="popper">
+                  <SelectItem value="__all__">ทั้งหมด</SelectItem>
                   {(burnTypeData as BurnType[]).map((type) => (
                     <SelectItem key={type.LookupCode} value={type.LookupValue}>
                       {type.LookupValue}
@@ -398,8 +544,11 @@ export function FilterSection({
                 ชนิดเชื้อเพลิง
               </label>
               <Select
-                value={filters.fuelType}
-                onValueChange={(value) => updateFilter("fuelType", value)}
+                value={filters.fuelType || "__all__"}
+                onValueChange={(value) => {
+                  const actualValue = value === "__all__" ? "" : value;
+                  updateFilter("fuelType", actualValue);
+                }}
                 disabled={!filters.landUseType}
               >
                 <SelectTrigger className="bg-muted/50 text-black">
@@ -412,6 +561,7 @@ export function FilterSection({
                   />
                 </SelectTrigger>
                 <SelectContent className="bg-card z-[9999]" position="popper">
+                  <SelectItem value="__all__">ทั้งหมด</SelectItem>
                   {filteredFuelTypes.map((type) => (
                     <SelectItem key={type.LookupCode} value={type.LookupValue}>
                       {type.LookupValue}
@@ -431,13 +581,17 @@ export function FilterSection({
                 สถานะการอนุมัติ
               </label>
               <Select
-                value={filters.approvalStatus}
-                onValueChange={(value) => updateFilter("approvalStatus", value)}
+                value={filters.approvalStatus || "__all__"}
+                onValueChange={(value) => {
+                  const actualValue = value === "__all__" ? "" : value;
+                  updateFilter("approvalStatus", actualValue);
+                }}
               >
                 <SelectTrigger className="bg-muted/50 text-black">
                   <SelectValue placeholder="เลือกสถานะ" />
                 </SelectTrigger>
                 <SelectContent className="bg-card">
+                  <SelectItem value="__all__">ทั้งหมด</SelectItem>
                   {approvalStatuses.map((status) => (
                     <SelectItem key={status.value} value={status.value}>
                       {status.label}
@@ -451,9 +605,9 @@ export function FilterSection({
             <div>
               <label className="text-sm font-medium text-[#D32F2F] mb-2 flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-[#D32F2F]" />
-                วันที่เริ่มต้น
+                วันที่เริ่มต้นจัดการเชื้อเพลิง
               </label>
-              <Popover>
+              <Popover open={isDateFromOpen} onOpenChange={setIsDateFromOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -472,7 +626,10 @@ export function FilterSection({
                   <CalendarComponent
                     mode="single"
                     selected={filters.dateFrom}
-                    onSelect={(date) => updateFilter("dateFrom", date)}
+                    onSelect={(date) => {
+                      updateFilter("dateFrom", date);
+                      setIsDateFromOpen(false);
+                    }}
                     initialFocus
                     className="pointer-events-auto"
                   />
@@ -483,9 +640,9 @@ export function FilterSection({
             {/* Date To */}
             <div>
               <label className="text-sm font-medium text-[#D32F2F] mb-2 block">
-                วันที่สิ้นสุด
+                วันที่สิ้นสุดการจัดการเชื้อเพลิง
               </label>
-              <Popover>
+              <Popover open={isDateToOpen} onOpenChange={setIsDateToOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -504,7 +661,10 @@ export function FilterSection({
                   <CalendarComponent
                     mode="single"
                     selected={filters.dateTo}
-                    onSelect={(date) => updateFilter("dateTo", date)}
+                    onSelect={(date) => {
+                      updateFilter("dateTo", date);
+                      setIsDateToOpen(false);
+                    }}
                     initialFocus
                     className="pointer-events-auto"
                   />
@@ -513,8 +673,12 @@ export function FilterSection({
             </div>
           </div>
 
-          {/* Search Button */}
-          <div className="flex justify-end mt-4">
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={onReset} className="gap-2">
+              <RotateCcw className="w-4 h-4" />
+              รีเซ็ต
+            </Button>
             <Button
               onClick={onSearch}
               disabled={isLoading}

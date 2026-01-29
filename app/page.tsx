@@ -13,8 +13,8 @@ const initialFilters: FilterState = {
   province: "",
   district: "",
   subDistrict: "",
-  dateFrom: undefined,
-  dateTo: undefined,
+  dateFrom: new Date(new Date().getFullYear(), 0, 1), // Jan 1 of current year
+  dateTo: new Date(), // Today
   fuelType: "",
   landUseType: "",
 };
