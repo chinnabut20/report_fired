@@ -111,7 +111,8 @@ export function ResultsSection({ data, totalCount }: ResultsSectionProps) {
     });
 
     // Find the index of the status column (1-based for ExcelJS)
-    const statusColumnIndex = headers.indexOf("สถานะการอนุมัติ") + 1;
+    const statusColumnIndex =
+      headers.indexOf("สถานะการอนุมัติ / การรายงานผลกลับ") + 1;
 
     // Add data rows with status color
     exportData.forEach((row, rowIndex) => {

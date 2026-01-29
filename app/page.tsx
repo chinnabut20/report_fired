@@ -19,8 +19,6 @@ const initialFilters: FilterState = {
   landUseType: "",
 };
 
-// Map สถานะจากภาษาไทย (API) เป็น enum ภาษาอังกฤษ (Frontend)
-// Map สถานะจากภาษาไทย (API) เป็น enum ภาษาอังกฤษ (Frontend)
 const mapApprovalStatus = (
   statusText: string,
 ): FuelRequest["approvalStatus"] => {
@@ -64,9 +62,9 @@ const Index = () => {
       if (filterParams.subDistrict)
         params.append("sub_district", filterParams.subDistrict);
       if (filterParams.fuelType)
-        params.append("burntype", filterParams.fuelType);
+        params.append("burntypedes", filterParams.fuelType);
       if (filterParams.landUseType)
-        params.append("burntypedes", filterParams.landUseType);
+        params.append("burntype", filterParams.landUseType);
       if (filterParams.approvalStatus) {
         params.append(
           "status",
@@ -106,8 +104,11 @@ const Index = () => {
         province: item.province || "",
         district: item.district || "",
         subDistrict: item.sub_district || "",
-        fuelType: item.burn_type || "",
-        landUseType: item.burn_type_des || "",
+        // หมายเหตุ:
+        // - burn_type      = ประเภทการใช้ที่ดิน (landUseType)
+        // - burn_type_des  = ชนิดเชื้อเพลิง (fuelType)
+        landUseType: item.burn_type || "",
+        fuelType: item.burn_type_des || "",
         requestedArea: Number(item.burn_area) || 0,
         latitude: Number(item.latitude) || 0,
         longitude: Number(item.longitude) || 0,
