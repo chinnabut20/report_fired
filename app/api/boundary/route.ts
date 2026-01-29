@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { boundaryDb } from "@/lib/db";
+import { db } from "@/lib/db";
 
 const getProvinces = async () => {
     const query = `
@@ -7,7 +7,7 @@ const getProvinces = async () => {
         FROM public.th_province_4326
         ORDER BY prov_namt ASC;
     `;
-    return await boundaryDb.query(query);
+    return await db.query(query);
 };
 
 const getAmphoes = async (provCode: string) => {
@@ -18,7 +18,7 @@ const getAmphoes = async (provCode: string) => {
         WHERE prov_code = $1
         ORDER BY amp_namt ASC;
     `;
-    return await boundaryDb.query(query, [provCode]);
+    return await db.query(query, [provCode]);
 };
 
 const getTambons = async (provCode: string, ampCode: string) => {
@@ -30,7 +30,7 @@ const getTambons = async (provCode: string, ampCode: string) => {
         WHERE prov_code = $1 AND amp_code = $2
         ORDER BY tam_namt ASC;
     `;
-    return await boundaryDb.query(query, [provCode, shortAmpCode]);
+    return await db.query(query, [provCode, shortAmpCode]);
 };
 
 export async function GET(request: NextRequest) {
