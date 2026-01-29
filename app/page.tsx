@@ -20,14 +20,17 @@ const initialFilters: FilterState = {
 };
 
 // Map สถานะจากภาษาไทย (API) เป็น enum ภาษาอังกฤษ (Frontend)
+// Map สถานะจากภาษาไทย (API) เป็น enum ภาษาอังกฤษ (Frontend)
 const mapApprovalStatus = (
   statusText: string,
 ): FuelRequest["approvalStatus"] => {
   switch (statusText) {
     case "รออนุมัติ":
       return "pending";
+    case "อนุมัติแล้ว": // Case for "อนุมัติแล้ว" label if needed, or fallback
     case "อนุมัติแล้วยังไม่รายงาน":
       return "approved";
+    case "รายงานผลแล้ว": // Case for "รายงานผลแล้ว" label if needed
     case "อนุมัติรายงานผลแล้ว":
       return "reported";
     case "ไม่อนุมัติ":
@@ -37,20 +40,8 @@ const mapApprovalStatus = (
   }
 };
 
-// Map สถานะจาก enum ภาษาอังกฤษ (Frontend) เป็นภาษาไทย (API)
 const mapApprovalStatusToAPI = (status: string): string => {
-  switch (status) {
-    case "pending":
-      return "รออนุมัติ";
-    case "approved":
-      return "อนุมัติแล้วยังไม่รายงาน";
-    case "reported":
-      return "อนุมัติรายงานผลแล้ว";
-    case "rejected":
-      return "ไม่อนุมัติ";
-    default:
-      return "";
-  }
+  return status;
 };
 
 const Index = () => {
@@ -82,17 +73,18 @@ const Index = () => {
           mapApprovalStatusToAPI(filterParams.approvalStatus),
         );
       }
+      const formatDate = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      };
+
       if (filterParams.dateFrom) {
-        params.append(
-          "startDate",
-          filterParams.dateFrom.toISOString().split("T")[0],
-        );
+        params.append("startDate", formatDate(filterParams.dateFrom));
       }
       if (filterParams.dateTo) {
-        params.append(
-          "endDate",
-          filterParams.dateTo.toISOString().split("T")[0],
-        );
+        params.append("endDate", formatDate(filterParams.dateTo));
       }
 
       const response = await fetch(`/api/filter?${params.toString()}`);

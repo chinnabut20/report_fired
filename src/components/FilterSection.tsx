@@ -43,10 +43,11 @@ import burnTypeData from "@/data/burnType.json";
 import burnTypeDesData from "@/data/burnTypeDes.json";
 
 const approvalStatuses = [
-  { value: "pending", label: "รอการอนุมัติ" },
-  { value: "approved", label: "อนุมัติแล้ว" },
-  { value: "rejected", label: "ไม่อนุมัติ" },
-  { value: "reported", label: "รายงานผลแล้ว" },
+  { value: "รออนุมัติ", label: "รอการอนุมัติ" },
+  { value: "อนุมัติแล้วยังไม่รายงาน", label: "อนุมัติแล้ว" },
+  { value: "อนุมัติรายงานผลแล้ว", label: "รายงานผลแล้ว" },
+  { value: "ไม่อนุมัติ", label: "ไม่อนุมัติ" },
+  { value: "อนุมัติทั้งหมด", label: "อนุมัติทั้งหมด" },
 ];
 
 // Types for JSON data
