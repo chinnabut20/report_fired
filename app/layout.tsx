@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "FireD - ระบบกรองข้อมูลคำร้องขอจัดการเชื้อเพลิง",
-  description: "ระบบกรองข้อมูลคำร้องขอจัดการเชื้อเพลิง",
+  title: "FireD - ระบบรายงานข้อมูลคำร้องขอจัดการเชื้อเพลิง",
+  description: "ระบบรายงานข้อมูลคำร้องขอจัดการเชื้อเพลิง",
 };
 
 export default function RootLayout({

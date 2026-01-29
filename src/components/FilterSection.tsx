@@ -29,9 +29,15 @@ import { format } from "date-fns";
 import { th } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { FilterState } from "@/types/fuel-request";
-import { approvalStatuses } from "@/data/mock-data";
 import burnTypeData from "@/data/burnType.json";
 import burnTypeDesData from "@/data/burnTypeDes.json";
+
+const approvalStatuses = [
+  { value: "pending", label: "รอการอนุมัติ" },
+  { value: "approved", label: "อนุมัติแล้ว" },
+  { value: "rejected", label: "ไม่อนุมัติ" },
+  { value: "reported", label: "รายงานผลแล้ว" },
+];
 
 // Types for JSON data
 interface BurnType {

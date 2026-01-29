@@ -51,8 +51,8 @@ const statusConfig = {
 };
 
 const prepareExportData = (data: FuelRequest[]) => {
-  return data.map((item) => ({
-    ลำดับ: item.id,
+  return data.map((item, index) => ({
+    ลำดับ: index + 1,
     คำนำหน้า: item.prefix,
     ชื่อ: item.firstName,
     นามสกุล: item.lastName,
@@ -277,12 +277,14 @@ export function ResultsSection({ data, totalCount }: ResultsSectionProps) {
                   <SelectItem value="100">100</SelectItem>
                 </SelectContent>
               </Select>
-              <span className="text-sm text-muted-foreground">
+              <span className="text-sm text-muted-foreground font-['Comic_Sans_MS']">
                 entries per page
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Search:</span>
+              <span className="text-sm text-muted-foreground font-['Comic_Sans_MS']">
+                search
+              </span>
               <div className="relative">
                 <Input
                   placeholder="ค้นหา..."
@@ -370,11 +372,11 @@ export function ResultsSection({ data, totalCount }: ResultsSectionProps) {
                   paginatedData.map((request, index) => {
                     const status = statusConfig[request.approvalStatus];
                     const globalIndex =
-                      (currentPage - 1) * itemsPerPage + index;
+                      (currentPage - 1) * itemsPerPage + index + 1;
                     return (
                       <TableRow key={request.id} className="hover:bg-muted/30">
                         <TableCell className="text-center">
-                          {request.id}
+                          {globalIndex}
                         </TableCell>
                         <TableCell>{request.prefix}</TableCell>
                         <TableCell>{request.firstName}</TableCell>
