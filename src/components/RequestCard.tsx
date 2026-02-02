@@ -28,12 +28,12 @@ interface RequestCardProps {
 
 const statusConfig = {
   pending: {
-    label: "รอการอนุมัติ",
+    label: "รออนุมัติ",
     icon: Clock,
     className: "bg-warning/10 text-warning border-warning/20",
   },
   approved: {
-    label: "อนุมัติแล้ว",
+    label: "อนุมัติแล้วยังไม่รายงาน",
     icon: CheckCircle2,
     className: "bg-success/10 text-success border-success/20",
   },
@@ -43,7 +43,7 @@ const statusConfig = {
     className: "bg-destructive/10 text-destructive border-destructive/20",
   },
   reported: {
-    label: "รายงานผลแล้ว",
+    label: "อนุมัติรายงานผลแล้ว",
     icon: FileCheck,
     className: "bg-info/10 text-info border-info/20",
   },

@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FuelRequest } from "@/types/fuel-request";
 import { Download, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { format } from "date-fns";
+import { th } from "date-fns/locale";
 import {
   Table,
   TableBody,
@@ -29,15 +31,17 @@ import { saveAs } from "file-saver";
 interface ResultsSectionProps {
   data: FuelRequest[];
   totalCount: number;
+  dateFrom?: Date;
+  dateTo?: Date;
 }
 
 const statusConfig = {
   pending: {
-    label: "รอการอนุมัติ",
+    label: "รออนุมัติ",
     className: "bg-warning/10 text-warning border-warning/20",
   },
   approved: {
-    label: "อนุมัติแล้ว",
+    label: "อนุมัติแล้วยังไม่รายงาน",
     className: "bg-success/10 text-success border-success/20",
   },
   rejected: {
@@ -45,9 +49,67 @@ const statusConfig = {
     className: "bg-destructive/10 text-destructive border-destructive/20",
   },
   reported: {
-    label: "รายงานผลแล้ว",
+    label: "อนุมัติรายงานผลแล้ว",
     className: "bg-info/10 text-info border-info/20",
   },
+};
+
+// Helper function สำหรับแปลงวันที่เป็น พ.ศ.
+const formatDateThai = (date: Date, formatStr: string) => {
+  const buddhistYear = date.getFullYear() + 543;
+  const formatted = format(date, formatStr, { locale: th });
+  // แทนที่ปี ค.ศ. ด้วย ปี พ.ศ.
+  return formatted.replace(String(date.getFullYear()), String(buddhistYear));
+};
+
+// Helper function สำหรับแปลงวันที่เป็น พ.ศ. โดยทำให้ตัวเลขเป็นตัวหนา (return JSX)
+const formatDateThaiWithBoldNumbers = (
+  date: Date,
+  formatStr: string,
+  textColor: string,
+) => {
+  const buddhistYear = date.getFullYear() + 543;
+  const formatted = format(date, formatStr, { locale: th });
+  const formattedThai = formatted.replace(
+    String(date.getFullYear()),
+    String(buddhistYear),
+  );
+
+  // แยกส่วนที่เป็นตัวเลขและตัวอักษร
+  const parts = formattedThai.split(/(\d+)/);
+
+  return (
+    <span style={{ color: textColor }} className="font-prompt">
+      {parts.map((part, index) => {
+        // ถ้าเป็นตัวเลข ให้ใส่ font-semibold
+        if (/^\d+$/.test(part)) {
+          return (
+            <span key={index} className="font-semibold">
+              {part}
+            </span>
+          );
+        }
+        return <span key={index}>{part}</span>;
+      })}
+    </span>
+  );
+};
+
+// Helper function สำหรับแปลงวันที่ที่เป็น string (DD/MM/YYYY) จาก ค.ศ. เป็น พ.ศ.
+const convertDateStringToBuddhistYear = (
+  dateStr: string | null | undefined,
+): string => {
+  if (!dateStr || dateStr === "-") return "-";
+
+  // รูปแบบ DD/MM/YYYY
+  const match = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (match) {
+    const [, day, month, year] = match;
+    const buddhistYear = parseInt(year) + 543;
+    return `${day}/${month}/${buddhistYear}`;
+  }
+
+  return dateStr;
 };
 
 const prepareExportData = (data: FuelRequest[]) => {
@@ -57,15 +119,15 @@ const prepareExportData = (data: FuelRequest[]) => {
     ชื่อ: item.firstName,
     นามสกุล: item.lastName,
     เบอร์โทรศัพท์: item.phone,
-    วันที่ส่งคำร้อง: item.requestDate,
+    วันที่ส่งคำร้อง: convertDateStringToBuddhistYear(item.requestDate),
     จังหวัด: item.province,
     อำเภอ: item.district,
     ตำบล: item.subDistrict,
     ชนิดเชื้อเพลิง: item.fuelType,
     ประเภทการใช้ที่ดิน: item.landUseType,
     "ขนาดพื้นที่ที่ขอจัดการเชื้อเพลิง (ไร่)": item.requestedArea,
-    ละติจูด: item.latitude,
-    ลองจิจูด: item.longitude,
+    ละติจูด: item.latitude.toFixed(4),
+    ลองจิจูด: item.longitude.toFixed(4),
     "คำแนะนำในการอนุมัติ จากระบบ FireD": item.fireDRecommendation,
     "สถานะการอนุมัติ / การรายงานผลกลับ":
       statusConfig[item.approvalStatus].label,
@@ -73,11 +135,37 @@ const prepareExportData = (data: FuelRequest[]) => {
     นามสกุลผู้อนุมัติ: item.approverLastName || "-",
     เบอร์โทรผู้อนุมัติ: item.approverPhone || "-",
     "ขนาดพื้นที่อนุมัติ (ไร่)": item.approvedArea || "-",
-    วันที่จัดการเชื้อเพลิง: item.managementDate || "-",
+    วันที่จัดการเชื้อเพลิง: convertDateStringToBuddhistYear(
+      item.managementDate,
+    ),
   }));
 };
 
-export function ResultsSection({ data, totalCount }: ResultsSectionProps) {
+export function ResultsSection({
+  data,
+  totalCount,
+  dateFrom,
+  dateTo,
+}: ResultsSectionProps) {
+  // สร้างชื่อไฟล์สำหรับ export โดยใช้วันที่เริ่มต้นและสิ้นสุดที่ผู้ใช้ค้นหา
+  const getExportFileName = () => {
+    const formatDateForFileName = (date: Date) => {
+      return formatDateThai(date, "dd-MM-yyyy");
+    };
+
+    let fileName = "รายงานข้อมูลคำร้องขอจัดการเชื้อเพลิง";
+
+    if (dateFrom && dateTo) {
+      fileName += `_${formatDateForFileName(dateFrom)}_ถึง_${formatDateForFileName(dateTo)}`;
+    } else if (dateFrom) {
+      fileName += `_ตั้งแต่_${formatDateForFileName(dateFrom)}`;
+    } else if (dateTo) {
+      fileName += `_ถึง_${formatDateForFileName(dateTo)}`;
+    }
+
+    return fileName;
+  };
+
   const handleDownloadXLSX = async () => {
     const exportData = prepareExportData(data);
     const headers = Object.keys(exportData[0] || {});
@@ -130,11 +218,11 @@ export function ResultsSection({ data, totalCount }: ResultsSectionProps) {
         let textColor = "FF000000"; // Default black
 
         switch (statusValue) {
-          case "รอการอนุมัติ":
+          case "รออนุมัติ":
             bgColor = "FFFFF3CD"; // Yellow background
             textColor = "FF856404"; // Dark yellow text
             break;
-          case "อนุมัติแล้ว":
+          case "อนุมัติแล้วยังไม่รายงาน":
             bgColor = "FFD4EDDA"; // Green background
             textColor = "FF155724"; // Dark green text
             break;
@@ -142,7 +230,7 @@ export function ResultsSection({ data, totalCount }: ResultsSectionProps) {
             bgColor = "FFF8D7DA"; // Red background
             textColor = "FF721C24"; // Dark red text
             break;
-          case "รายงานผลแล้ว":
+          case "อนุมัติรายงานผลแล้ว":
             bgColor = "FFD1ECF1"; // Blue background
             textColor = "FF0C5460"; // Dark blue text
             break;
@@ -177,7 +265,7 @@ export function ResultsSection({ data, totalCount }: ResultsSectionProps) {
     const blob = new Blob([buffer], {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
-    saveAs(blob, "fuel_requests.xlsx");
+    saveAs(blob, `${getExportFileName()}.xlsx`);
   };
 
   const handleDownloadCSV = () => {
@@ -189,7 +277,7 @@ export function ResultsSection({ data, totalCount }: ResultsSectionProps) {
     });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = "fuel_requests.csv";
+    link.download = `${getExportFileName()}.csv`;
     link.click();
   };
 
@@ -198,20 +286,50 @@ export function ResultsSection({ data, totalCount }: ResultsSectionProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchText, setSearchText] = useState("");
 
-  // Filter data based on search
-  const filteredData = data.filter((item) => {
+  // Reset to page 1 when data changes (problem 1)
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [data]);
+
+  // Filter data based on search - search all columns (problem 3)
+  const filteredData = data.filter((item, index) => {
     if (!searchText) return true;
     const searchLower = searchText.toLowerCase();
-    return (
-      item.firstName?.toLowerCase().includes(searchLower) ||
-      item.lastName?.toLowerCase().includes(searchLower) ||
-      item.phone?.includes(searchText) ||
-      item.province?.toLowerCase().includes(searchLower) ||
-      item.district?.toLowerCase().includes(searchLower) ||
-      item.subDistrict?.toLowerCase().includes(searchLower) ||
-      item.fuelType?.toLowerCase().includes(searchLower) ||
-      item.landUseType?.toLowerCase().includes(searchLower)
-    );
+    const status = statusConfig[item.approvalStatus];
+
+    // Convert all displayed values to strings for searching (matching what's shown in table)
+    // Note: ลำดับ in table uses globalIndex, but for search we use array index + 1
+    const allValues = [
+      String(index + 1), // ลำดับ (array index)
+      item.prefix || "",
+      item.firstName || "",
+      item.lastName || "",
+      item.phone || "",
+      item.requestDate || "",
+      item.province || "",
+      item.district || "",
+      item.subDistrict || "",
+      item.fuelType || "",
+      item.landUseType || "",
+      String(item.requestedArea || ""),
+      item.latitude != null ? item.latitude.toFixed(4) : "",
+      item.longitude != null ? item.longitude.toFixed(4) : "",
+      item.fireDRecommendation || "",
+      status.label || "",
+      item.approverFirstName || "",
+      item.approverLastName || "",
+      item.approverPhone || "",
+      item.approvedArea != null ? String(item.approvedArea) : "",
+      item.managementDate || "",
+    ];
+
+    // Search in all values - convert everything to lowercase and search
+    // This ensures we find matches in any column regardless of data type
+    return allValues.some((value) => {
+      if (!value || value === "-") return false;
+      // Convert to string and search case-insensitively
+      return String(value).toLowerCase().includes(searchLower);
+    });
   });
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
@@ -267,12 +385,46 @@ export function ResultsSection({ data, totalCount }: ResultsSectionProps) {
                 <h2 className="text-xl font-semibold text-foreground">
                   ผลลัพธ์การค้นหา
                 </h2>
-                <p className="text-sm text-muted-foreground">
-                  พบ{" "}
-                  <span className="font-semibold text-primary">
-                    {data.length}
-                  </span>{" "}
-                  รายการ จากทั้งหมด {totalCount} รายการ
+                <p className="text-sm text-muted-foreground font-prompt">
+                  {dateFrom && dateTo ? (
+                    <>
+                      <span
+                        style={{ color: "#5D4037" }}
+                        className="font-prompt font-semibold"
+                      >
+                        {formatDateThai(dateFrom, "d MMM yyyy")}
+                      </span>{" "}
+                      -{" "}
+                      <span
+                        style={{ color: "#D32F2F" }}
+                        className="font-prompt font-semibold"
+                      >
+                        {formatDateThai(dateTo, "d MMM yyyy")}
+                      </span>
+                    </>
+                  ) : dateFrom ? (
+                    <span
+                      style={{ color: "#5D4037" }}
+                      className="font-prompt font-semibold"
+                    >
+                      {formatDateThai(dateFrom, "d MMM yyyy")}
+                    </span>
+                  ) : dateTo ? (
+                    <span
+                      style={{ color: "#D32F2F" }}
+                      className="font-prompt font-semibold"
+                    >
+                      {formatDateThai(dateTo, "d MMM yyyy")}
+                    </span>
+                  ) : (
+                    <>
+                      พบ{" "}
+                      <span className="font-semibold text-primary">
+                        {data.length}
+                      </span>{" "}
+                      รายการ จากทั้งหมด {totalCount} รายการ
+                    </>
+                  )}
                 </p>
               </div>
             </div>
@@ -426,7 +578,9 @@ export function ResultsSection({ data, totalCount }: ResultsSectionProps) {
                         <TableCell>{request.firstName}</TableCell>
                         <TableCell>{request.lastName}</TableCell>
                         <TableCell>{request.phone}</TableCell>
-                        <TableCell>{request.requestDate}</TableCell>
+                        <TableCell>
+                          {convertDateStringToBuddhistYear(request.requestDate)}
+                        </TableCell>
                         <TableCell>{request.province}</TableCell>
                         <TableCell>{request.district}</TableCell>
                         <TableCell>{request.subDistrict}</TableCell>
@@ -463,7 +617,11 @@ export function ResultsSection({ data, totalCount }: ResultsSectionProps) {
                         <TableCell className="text-center">
                           {request.approvedArea || "-"}
                         </TableCell>
-                        <TableCell>{request.managementDate || "-"}</TableCell>
+                        <TableCell>
+                          {convertDateStringToBuddhistYear(
+                            request.managementDate,
+                          )}
+                        </TableCell>
                       </TableRow>
                     );
                   })
@@ -483,13 +641,33 @@ export function ResultsSection({ data, totalCount }: ResultsSectionProps) {
           </ScrollArea>
 
           {/* Pagination Controls */}
-          {filteredData.length > itemsPerPage && (
-            <div className="flex items-center justify-between mt-4 px-2">
-              <p className="text-sm text-muted-foreground">
-                แสดงรายการที่ {(currentPage - 1) * itemsPerPage + 1} -{" "}
-                {Math.min(currentPage * itemsPerPage, filteredData.length)}{" "}
-                จากทั้งหมด {filteredData.length} รายการ
-              </p>
+          <div className="flex items-center justify-between mt-4 px-2">
+            <p className="text-sm text-foreground">
+              แสดงรายการที่{" "}
+              <span className="font-semibold text-primary">
+                {(currentPage - 1) * itemsPerPage + 1}
+              </span>{" "}
+              ถึง{" "}
+              <span className="font-semibold text-primary">
+                {Math.min(currentPage * itemsPerPage, filteredData.length)}
+              </span>{" "}
+              จากทั้งหมด{" "}
+              <span className="font-semibold text-primary">
+                {filteredData.length}
+              </span>{" "}
+              รายการ
+              {filteredData.length < totalCount && (
+                <>
+                  {" "}
+                  (กรองจากทั้งหมด{" "}
+                  <span className="font-semibold text-primary">
+                    {totalCount}
+                  </span>{" "}
+                  รายการ)
+                </>
+              )}
+            </p>
+            {filteredData.length > itemsPerPage ? (
               <div className="flex items-center gap-1">
                 {/* First Page */}
                 <Button
@@ -572,8 +750,8 @@ export function ResultsSection({ data, totalCount }: ResultsSectionProps) {
                   »
                 </Button>
               </div>
-            </div>
-          )}
+            ) : null}
+          </div>
         </CardContent>
       </Card>
     </div>

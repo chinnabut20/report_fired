@@ -228,7 +228,12 @@ const Index = () => {
         />
 
         {/* Results Section */}
-        <ResultsSection data={data} totalCount={totalCount} />
+        <ResultsSection 
+          data={data} 
+          totalCount={totalCount}
+          dateFrom={filters.dateFrom}
+          dateTo={filters.dateTo}
+        />
       </main>
     </div>
   );

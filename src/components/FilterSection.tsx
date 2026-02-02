@@ -42,8 +42,16 @@ import { FilterState } from "@/types/fuel-request";
 import burnTypeData from "@/data/burnType.json";
 import burnTypeDesData from "@/data/burnTypeDes.json";
 
+// Helper function สำหรับแปลงวันที่เป็น พ.ศ.
+const formatDateThai = (date: Date, formatStr: string) => {
+  const buddhistYear = date.getFullYear() + 543;
+  const formatted = format(date, formatStr, { locale: th });
+  // แทนที่ปี ค.ศ. ด้วย ปี พ.ศ.
+  return formatted.replace(String(date.getFullYear()), String(buddhistYear));
+};
+
 const approvalStatuses = [
-  { value: "รออนุมัติ", label: "รอการอนุมัติ" },
+  { value: "รออนุมัติ", label: "รออนุมัติ" },
   { value: "อนุมัติแล้วยังไม่รายงาน", label: "อนุมัติแล้วยังไม่รายงาน" },
   { value: "อนุมัติรายงานผลแล้ว", label: "อนุมัติรายงานผลแล้ว" },
   { value: "ไม่อนุมัติ", label: "ไม่อนุมัติ" },
@@ -619,7 +627,7 @@ export function FilterSection({
                   >
                     <Calendar className="mr-2 h-4 w-4" />
                     {filters.dateFrom
-                      ? format(filters.dateFrom, "d MMM yyyy", { locale: th })
+                      ? formatDateThai(filters.dateFrom, "d MMM yyyy")
                       : "เลือกวันที่"}
                   </Button>
                 </PopoverTrigger>
@@ -654,7 +662,7 @@ export function FilterSection({
                   >
                     <Calendar className="mr-2 h-4 w-4" />
                     {filters.dateTo
-                      ? format(filters.dateTo, "d MMM yyyy", { locale: th })
+                      ? formatDateThai(filters.dateTo, "d MMM yyyy")
                       : "เลือกวันที่"}
                   </Button>
                 </PopoverTrigger>
