@@ -47,9 +47,13 @@ const Index = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [data, setData] = useState<FuelRequest[]>([]);
   const [totalCount, setTotalCount] = useState(0);
+  const [searchId, setSearchId] = useState<number>(0);
 
   // Function สำหรับ fetch ข้อมูลจาก API
-  const fetchData = async (filterParams: FilterState) => {
+  const fetchData = async (
+    filterParams: FilterState,
+    showSuccessAlert = false,
+  ) => {
     setIsSearching(true);
     try {
       // สร้าง query parameters
@@ -149,19 +153,21 @@ const Index = () => {
       setData(filteredData);
       setTotalCount(filteredData.length);
 
-      // Show success toast notification
-      Swal.fire({
-        toast: true,
-        position: "top-end",
-        icon: "success",
-        title: "ค้นหาเสร็จสิ้น!",
-        showConfirmButton: false,
-        timer: 2000,
-        timerProgressBar: true,
-        customClass: {
-          popup: "text-sm",
-        },
-      });
+      // Show success toast notification only if requested
+      if (showSuccessAlert) {
+        Swal.fire({
+          toast: true,
+          position: "top-end",
+          icon: "success",
+          title: "ค้นหาเสร็จสิ้น!",
+          showConfirmButton: false,
+          timer: 2000,
+          timerProgressBar: true,
+          customClass: {
+            popup: "text-sm",
+          },
+        });
+      }
     } catch (error) {
       console.error("Error fetching data:", error);
       Swal.fire({
@@ -180,16 +186,58 @@ const Index = () => {
 
   // Load initial data เมื่อ component mount
   useEffect(() => {
-    fetchData(initialFilters);
+    fetchData(initialFilters, false);
   }, []);
 
   const handleReset = () => {
     setFilters(initialFilters);
-    fetchData(initialFilters);
+    setSearchId((prev) => prev + 1); // Trigger pagination reset
+    fetchData(initialFilters, true);
   };
 
   const handleSearch = () => {
-    fetchData(filters);
+    setSearchId((prev) => prev + 1); // Trigger pagination reset
+    fetchData(filters, true);
+  };
+
+  // Function สำหรับลบข้อมูล (soft delete)
+  const handleDelete = async (id: string, name?: string) => {
+    try {
+      const response = await fetch(`/api/filter?id=${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete data");
+      }
+
+      // Refresh ข้อมูลหลังจากลบสำเร็จ
+      await fetchData(filters, false);
+
+      // แสดง SweetAlert หลังจาก refresh เสร็จ
+      Swal.fire({
+        icon: "success",
+        title: "ลบข้อมูลสำเร็จ",
+        text: name
+          ? `ลบคำร้องของ ${name} เรียบร้อยแล้ว`
+          : "ลบข้อมูลเรียบร้อยแล้ว",
+        confirmButtonText: "ตกลง",
+        confirmButtonColor: "#4CAF50",
+        timer: 3000,
+        timerProgressBar: true,
+      });
+    } catch (error) {
+      console.error("Error deleting data:", error);
+      Swal.fire({
+        toast: true,
+        position: "top-end",
+        icon: "error",
+        title: "เกิดข้อผิดพลาดในการลบข้อมูล",
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+      });
+    }
   };
 
   return (
@@ -228,11 +276,13 @@ const Index = () => {
         />
 
         {/* Results Section */}
-        <ResultsSection 
-          data={data} 
+        <ResultsSection
+          data={data}
           totalCount={totalCount}
           dateFrom={filters.dateFrom}
           dateTo={filters.dateTo}
+          onDelete={handleDelete}
+          searchId={searchId}
         />
       </main>
     </div>

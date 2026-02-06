@@ -1,8 +1,15 @@
 import { useState, useEffect } from "react";
 import { FuelRequest } from "@/types/fuel-request";
-import { Download, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import {
+  Download,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  Trash2,
+} from "lucide-react";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
+import Swal from "sweetalert2";
 import {
   Table,
   TableBody,
@@ -27,12 +34,25 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import * as XLSX from "xlsx";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface ResultsSectionProps {
   data: FuelRequest[];
   totalCount: number;
   dateFrom?: Date;
   dateTo?: Date;
+  onDelete?: (id: string, name?: string) => void;
+  searchId?: number; // Add searchId prop
 }
 
 const statusConfig = {
@@ -146,6 +166,8 @@ export function ResultsSection({
   totalCount,
   dateFrom,
   dateTo,
+  onDelete,
+  searchId,
 }: ResultsSectionProps) {
   // สร้างชื่อไฟล์สำหรับ export โดยใช้วันที่เริ่มต้นและสิ้นสุดที่ผู้ใช้ค้นหา
   const getExportFileName = () => {
@@ -219,20 +241,20 @@ export function ResultsSection({
 
         switch (statusValue) {
           case "รออนุมัติ":
-            bgColor = "FFFFF3CD"; // Yellow background
-            textColor = "FF856404"; // Dark yellow text
+            bgColor = "FFFFC107"; // Bright yellow/amber background
+            textColor = "FF000000"; // Black text
             break;
           case "อนุมัติแล้วยังไม่รายงาน":
-            bgColor = "FFD4EDDA"; // Green background
-            textColor = "FF155724"; // Dark green text
+            bgColor = "FF28A745"; // Bright green background
+            textColor = "FFFFFFFF"; // White text
             break;
           case "ไม่อนุมัติ":
-            bgColor = "FFF8D7DA"; // Red background
-            textColor = "FF721C24"; // Dark red text
+            bgColor = "FFDC3545"; // Bright red background
+            textColor = "FFFFFFFF"; // White text
             break;
           case "อนุมัติรายงานผลแล้ว":
-            bgColor = "FFD1ECF1"; // Blue background
-            textColor = "FF0C5460"; // Dark blue text
+            bgColor = "FF17A2B8"; // Bright blue/cyan background
+            textColor = "FFFFFFFF"; // White text
             break;
         }
 
@@ -286,10 +308,18 @@ export function ResultsSection({
   const [currentPage, setCurrentPage] = useState(1);
   const [searchText, setSearchText] = useState("");
 
-  // Reset to page 1 when data changes (problem 1)
+  // Reset to page 1 when searchId changes (New Search or Reset)
   useEffect(() => {
     setCurrentPage(1);
-  }, [data]);
+  }, [searchId]);
+
+  // Adjust current page if data is deleted and current page becomes empty
+  useEffect(() => {
+    const totalPages = Math.ceil(totalCount / itemsPerPage);
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalCount, itemsPerPage, currentPage]);
 
   // Filter data based on search - search all columns (problem 3)
   const filteredData = data.filter((item, index) => {
@@ -561,6 +591,9 @@ export function ResultsSection({
                   <TableHead className="font-semibold text-foreground min-w-[140px]">
                     วันที่จัดการเชื้อเพลิง
                   </TableHead>
+                  <TableHead className="font-semibold text-foreground min-w-[100px] text-center">
+                    ดำเนินการ
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -601,7 +634,7 @@ export function ResultsSection({
                         >
                           {request.fireDRecommendation}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-center">
                           <Badge
                             variant="outline"
                             className={cn("text-xs", status.className)}
@@ -617,10 +650,57 @@ export function ResultsSection({
                         <TableCell className="text-center">
                           {request.approvedArea || "-"}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-center">
                           {convertDateStringToBuddhistYear(
                             request.managementDate,
                           )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="bg-[#D32F2F] text-white hover:bg-[#B71C1C] hover:text-white rounded-xl w-9 h-9 p-0"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle className="text-[#D32F2F] text-lg font-semibold">
+                                  ยืนยันการลบข้อมูล
+                                </AlertDialogTitle>
+                                <AlertDialogDescription asChild>
+                                  <div className="text-sm text-muted-foreground">
+                                    <p className="text-[#5D4037] font-semibold">
+                                      การดำเนินการนี้ไม่สามารถย้อนกลับได้
+                                    </p>
+                                    <p className="mt-2 text-foreground">
+                                      คุณต้องการลบคำร้องของ{" "}
+                                      <span className="text-primary font-semibold">
+                                        {request.prefix}
+                                        {request.firstName} {request.lastName}
+                                      </span>{" "}
+                                      ใช่หรือไม่?
+                                    </p>
+                                  </div>
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>ยกเลิก</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => {
+                                    const name = `${request.prefix}${request.firstName} ${request.lastName}`;
+                                    onDelete?.(request.id, name);
+                                  }}
+                                  className="bg-[#D32F2F] text-white hover:bg-[#B71C1C]"
+                                >
+                                  ลบข้อมูล
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </TableCell>
                       </TableRow>
                     );
@@ -628,7 +708,7 @@ export function ResultsSection({
                 ) : (
                   <TableRow>
                     <TableCell
-                      colSpan={21}
+                      colSpan={22}
                       className="h-32 text-center text-muted-foreground"
                     >
                       ไม่พบข้อมูลที่ตรงกับเงื่อนไข
