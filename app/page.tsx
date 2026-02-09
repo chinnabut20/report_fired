@@ -203,7 +203,7 @@ const Index = () => {
   // Function สำหรับลบข้อมูล (soft delete)
   const handleDelete = async (id: string, name?: string) => {
     try {
-      const response = await fetch(`/api/filter?id=${id}`, {
+      const response = await fetch(`/api/delete?id=${id}`, {
         method: "DELETE",
       });
 

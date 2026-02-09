@@ -1,15 +1,8 @@
 import { useState, useEffect } from "react";
 import { FuelRequest } from "@/types/fuel-request";
-import {
-  Download,
-  ChevronLeft,
-  ChevronRight,
-  Search,
-  Trash2,
-} from "lucide-react";
+import { Download, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { th } from "date-fns/locale";
-import Swal from "sweetalert2";
 import {
   Table,
   TableBody,
@@ -52,7 +45,7 @@ interface ResultsSectionProps {
   dateFrom?: Date;
   dateTo?: Date;
   onDelete?: (id: string, name?: string) => void;
-  searchId?: number; // Add searchId prop
+  searchId?: number;
 }
 
 const statusConfig = {
