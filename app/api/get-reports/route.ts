@@ -2,65 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from "@/lib/db";
 
 export async function GET(request: NextRequest) {
-    const { searchParams } = new URL(request.url);
-
-    // 1. รับค่า Params
-    const province = searchParams.get('province');
-    const district = searchParams.get('district');
-    const sub_district = searchParams.get('sub_district');
-    const startDate = searchParams.get('startDate');
-    const endDate = searchParams.get('endDate');
-    const burntype = searchParams.get('burntype');
-    const burntypedes = searchParams.get('burntypedes');
-    const status = searchParams.get('status');
-
     try {
-        // 2. สร้างเงื่อนไข WHERE
-        let conditions = ["deleted_at IS NULL"];
-        let values: any[] = [];
-        let pIndex = 1;
+        // 1. เงื่อนไขพื้นฐาน: ไม่เอาข้อมูลที่ถูกลบ (Soft Delete Check)
+        const whereClause = "WHERE deleted_at IS NULL";
 
-        if (province) { conditions.push(`province = $${pIndex++}`); values.push(province); }
-        if (district) { conditions.push(`district = $${pIndex++}`); values.push(district); }
-        if (sub_district) { conditions.push(`sub_district = $${pIndex++}`); values.push(sub_district); }
-
-        if (burntype) { conditions.push(`burn_type = $${pIndex++}`); values.push(burntype); }
-        if (burntypedes) { conditions.push(`burn_type_des = $${pIndex++}`); values.push(burntypedes); }
-
-        if (startDate && endDate) {
-            conditions.push(`burn_date BETWEEN $${pIndex++} AND $${pIndex++}`);
-            values.push(startDate, endDate);
-        } else if (startDate) {
-            conditions.push(`burn_date >= $${pIndex++}`);
-            values.push(startDate);
-        } else if (endDate) {
-            conditions.push(`burn_date <= $${pIndex++}`);
-            values.push(endDate);
-        }
-
-        if (status) {
-            switch (status) {
-                case 'รออนุมัติ':
-                    conditions.push(`(is_approve = false AND is_reject = false)`);
-                    break;
-                case 'อนุมัติแล้วยังไม่รายงาน':
-                    conditions.push(`(is_approve = true AND is_reject = false AND (actual_burn = 0 OR actual_burn IS NULL))`);
-                    break;
-                case 'อนุมัติรายงานผลแล้ว':
-                    conditions.push(`(is_approve = true AND is_reject = false AND actual_burn > 0)`);
-                    break;
-                case 'ไม่อนุมัติ':
-                    conditions.push(`(is_approve = false AND is_reject = true)`);
-                    break;
-                case 'อนุมัติทั้งหมด':
-                    conditions.push(`(is_approve = true AND is_reject = false)`);
-                    break;
-            }
-        }
-
-        const whereClause = conditions.length > 0 ? "WHERE " + conditions.join(" AND ") : "";
-
-        // 3. Query SQL
+        // 2. Query SQL
         const query = `
             SELECT 
                 id,
@@ -104,7 +50,7 @@ export async function GET(request: NextRequest) {
             ORDER BY id ASC;
         `;
 
-        const result = await db.query(query, values);
+        const result = await db.query(query);
 
         const formattedData = result.rows.map((row: any) => ({
             id: row.id,
@@ -138,7 +84,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(formattedData);
 
     } catch (error: any) {
-        console.error("Filter API Error:", error);
+        console.error("Get Reports API Error:", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
