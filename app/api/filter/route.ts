@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
 
-    // 1. รับค่า Params
+    // 1. รับค่า Params (ถ้าไม่มีก็จะเป็น null/undefined)
     const province = searchParams.get('province');
     const district = searchParams.get('district');
     const sub_district = searchParams.get('sub_district');
@@ -15,11 +15,13 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
 
     try {
-        // 2. สร้างเงื่อนไข WHERE
+        // 2. สร้างเงื่อนไข WHERE แบบ Dynamic
+        // เริ่มต้นด้วยเงื่อนไขพื้นฐาน: ไม่เอาข้อมูลที่ถูกลบ (Soft Delete Check)
         let conditions = ["deleted_at IS NULL"];
         let values: any[] = [];
         let pIndex = 1;
 
+        // ถ้ามีค่าส่งมา ให้เพิ่มเงื่อนไขเข้าไปใน Array
         if (province) { conditions.push(`province = $${pIndex++}`); values.push(province); }
         if (district) { conditions.push(`district = $${pIndex++}`); values.push(district); }
         if (sub_district) { conditions.push(`sub_district = $${pIndex++}`); values.push(sub_district); }
@@ -58,6 +60,7 @@ export async function GET(request: NextRequest) {
             }
         }
 
+        // แปลง Array เงื่อนไขให้เป็น String SQL
         const whereClause = conditions.length > 0 ? "WHERE " + conditions.join(" AND ") : "";
 
         // 3. Query SQL
@@ -104,6 +107,7 @@ export async function GET(request: NextRequest) {
             ORDER BY id ASC;
         `;
 
+        // ส่ง values เข้าไป (ถ้าไม่มี filter, values จะเป็น [])
         const result = await db.query(query, values);
 
         const formattedData = result.rows.map((row: any) => ({
@@ -138,7 +142,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(formattedData);
 
     } catch (error: any) {
-        console.error("Filter API Error:", error);
+        console.error("Get Reports API Error:", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

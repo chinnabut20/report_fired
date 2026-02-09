@@ -1,0 +1,15 @@
+@baseUrl = http://localhost:3000/api
+
+### 1. Get All Reports (ดึงข้อมูลทั้งหมด)
+GET {{baseUrl}}/filter
+
+### 2. Filter Reports (ดึงข้อมูลแบบมีเงื่อนไข)
+# ตัวอย่างการกรองตามจังหวัดและสถานะ
+GET {{baseUrl}}/filter?province=เชียงใหม่&status=รออนุมัติ
+
+### 3. Filter Reports (กรองตามวันที่)
+GET {{baseUrl}}/filter?startDate=2024-01-01&endDate=2024-12-31
+
+### 4. Delete Report (ลบข้อมูล - Soft Delete)
+# เปลี่ยน id=1 เป็น ID ที่ต้องการลบ
+DELETE {{baseUrl}}/delete?id=1
